@@ -8,22 +8,102 @@ document.addEventListener('DOMContentLoaded', () => {
     const loginPass = document.getElementById('login-pass');
     const loginError = document.getElementById('login-error');
 
-    const EXPECTED_USER_HASH = 'YWRtaW4=';
-    const EXPECTED_PASS_HASH = 'YWRtaW4xMjM=';
+    const EXPECTED_USER_HASH = 'YTdzMWQ2';
+    const EXPECTED_PASS_HASH = 'TTcxNTgzMzExMm0=';
 
+    const LOCKOUT_KEY = 'admin_lockout_until';
+    const ATTEMPTS_KEY = 'admin_login_attempts';
+    const PENALTY_COUNT_KEY = 'admin_penalty_count';
+    const THRESHOLD = 3;
+
+    let lockoutTimer = null;
+
+    function checkLockout() {
+        const lockoutUntil = localStorage.getItem(LOCKOUT_KEY);
+        if (lockoutUntil && Date.now() < parseInt(lockoutUntil)) {
+            const updateMessage = () => {
+                const now = Date.now();
+                const until = parseInt(lockoutUntil);
+                if (now >= until) {
+                    clearInterval(lockoutTimer);
+                    localStorage.removeItem(LOCKOUT_KEY);
+                    loginError.style.display = 'none';
+                    loginPass.disabled = false;
+                    loginUser.disabled = false;
+                    if (loginForm.querySelector('button')) loginForm.querySelector('button').disabled = false;
+                    return;
+                }
+                const remainingSecs = Math.ceil((until - now) / 1000);
+                const minutes = Math.floor(remainingSecs / 60);
+                const seconds = remainingSecs % 60;
+                loginError.textContent = `تم قفل الحساب مؤقتاً. يرجى المحاولة بعد ${minutes}:${seconds.toString().padStart(2, '0')} دقيقة.`;
+            };
+
+            loginError.style.display = 'block';
+            loginPass.disabled = true;
+            loginUser.disabled = true;
+            if (loginForm.querySelector('button')) loginForm.querySelector('button').disabled = true;
+            
+            updateMessage();
+            if (lockoutTimer) clearInterval(lockoutTimer);
+            lockoutTimer = setInterval(updateMessage, 1000);
+            return true;
+        }
+        
+        if (lockoutTimer) {
+            clearInterval(lockoutTimer);
+            lockoutTimer = null;
+        }
+        loginPass.disabled = false;
+        loginUser.disabled = false;
+        if (loginForm.querySelector('button')) loginForm.querySelector('button').disabled = false;
+        return false;
+    }
+
+    // Initial check
     if (loginForm) {
+        checkLockout();
+
         loginForm.addEventListener('submit', (e) => {
             e.preventDefault();
+            
+            if (checkLockout()) return;
+
             const userHash = btoa(loginUser.value);
             const passHash = btoa(loginPass.value);
 
             if (userHash === EXPECTED_USER_HASH && passHash === EXPECTED_PASS_HASH) {
+                // Success: Reset all security counters
+                localStorage.removeItem(LOCKOUT_KEY);
+                localStorage.removeItem(ATTEMPTS_KEY);
+                localStorage.removeItem(PENALTY_COUNT_KEY);
+                
                 loginScreen.style.display = 'none';
                 adminDashboard.style.display = 'flex';
                 initDashboard();
             } else {
-                loginError.style.display = 'block';
-                loginPass.value = '';
+                // Failure: Increment attempts
+                let attempts = (parseInt(localStorage.getItem(ATTEMPTS_KEY)) || 0) + 1;
+                localStorage.setItem(ATTEMPTS_KEY, attempts);
+
+                if (attempts >= THRESHOLD) {
+                    // Trigger lockout
+                    let penaltyCount = (parseInt(localStorage.getItem(PENALTY_COUNT_KEY)) || 0) + 1;
+                    localStorage.setItem(PENALTY_COUNT_KEY, penaltyCount);
+                    
+                    const lockoutDuration = penaltyCount * 5; // 5, 10, 15... minutes
+                    const lockoutUntil = Date.now() + (lockoutDuration * 60 * 1000);
+                    localStorage.setItem(LOCKOUT_KEY, lockoutUntil.toString());
+                    
+                    // Reset attempts for next turn
+                    localStorage.setItem(ATTEMPTS_KEY, 0);
+                    
+                    checkLockout();
+                } else {
+                    loginError.textContent = `بيانات الدخول غير صحيحة. المحاولات المتبقية: ${THRESHOLD - attempts}`;
+                    loginError.style.display = 'block';
+                    loginPass.value = '';
+                }
             }
         });
     }
@@ -57,6 +137,23 @@ document.addEventListener('DOMContentLoaded', () => {
         const submitBtn = document.getElementById('submit-btn');
         const cancelEditBtn = document.getElementById('cancel-edit-btn');
         const previewsContainer = document.getElementById('image-previews');
+        const sidebarToggle = document.getElementById('sidebar-toggle');
+        const sidebar = document.querySelector('.sidebar');
+
+        if(sidebarToggle && sidebar) {
+            sidebarToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('open');
+            });
+
+            // Close sidebar when clicking links on mobile
+            sidebar.querySelectorAll('a').forEach(link => {
+                link.addEventListener('click', () => {
+                    if (window.innerWidth <= 768) {
+                        sidebar.classList.remove('open');
+                    }
+                });
+            });
+        }
 
         const saveProducts = () => {
             localStorage.setItem('admin_products', JSON.stringify(storeProducts));

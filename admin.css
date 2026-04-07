@@ -213,7 +213,7 @@ td img {
     border-radius: 15px;
     border: 1px solid var(--border);
     box-shadow: 0 10px 40px rgba(0,0,0,0.8);
-    width: 100%;
+    width: 90%;
     max-width: 400px;
 }
 .w-100 {
@@ -221,4 +221,69 @@ td img {
 }
 .gold-text {
     color: var(--gold);
+}
+
+/* Responsiveness */
+@media (max-width: 992px) {
+    .sidebar { width: 200px; }
+    .main-content { padding: 20px; }
+}
+
+@media (max-width: 768px) {
+    .admin-container {
+        flex-direction: column;
+    }
+
+    .sidebar {
+        position: fixed;
+        right: -250px;
+        top: 0;
+        height: 100%;
+        width: 250px;
+        z-index: 1000;
+        transition: right 0.4s ease;
+        box-shadow: -10px 0 30px rgba(0,0,0,0.5);
+    }
+
+    .sidebar.open {
+        right: 0;
+    }
+
+    #sidebar-toggle {
+        display: block !important;
+    }
+
+    .main-content {
+        padding: 15px;
+    }
+
+    .header h2 {
+        font-size: 1.4rem;
+    }
+
+    .form-group-row {
+        grid-template-columns: 1fr !important;
+    }
+
+    .card {
+        padding: 15px;
+    }
+
+    h3 {
+        font-size: 1.2rem;
+    }
+
+    th, td {
+        padding: 10px 5px;
+        font-size: 0.85rem;
+    }
+    
+    td img {
+        width: 40px;
+        height: 40px;
+    }
+
+    .btn {
+        padding: 10px 15px;
+    }
 }
